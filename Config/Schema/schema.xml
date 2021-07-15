@@ -1,0 +1,49 @@
+<?xml version="1.0" ?>
+
+<schema version="0.3">
+    <table name="xsedestaff_petitions">
+        <field name="id" type="I">
+            <key />
+            <autoincrement />
+        </field>
+        <field name="co_petition_id" type="I">
+            <notnull />
+            <constraint>REFERENCES cm_co_petitions(id)</constraint>
+        </field>
+        <field name="l3_or_higher" type="L" />
+        <field name="funded_by_xsede" type="L" />
+        <field name="home_institution" type="C" size="256" />
+        <field name="home_institution_supervisor" type="C" size="256" />
+        <field name="home_institution_supervisor_email" type="C" size="256" />
+        <field name="staff_portal" type="L" />
+        <field name="email_distribution_lists" type="L" />
+        <field name="rt_ticket_system" type="L" />
+        <field name="other_resources" type="XL" />
+        <field name="additional_information" type="XL" />
+        <field name="created" type="T" />
+        <field name="modified" type="T" />
+
+        <index name="xsedestaff_petitions_i1">
+            <col>co_petition_id</col>
+        </index>
+    </table>
+
+    <table name="xsedestaff_compute_allocations">
+        <field name="id" type="I">
+            <key />
+            <autoincrement />
+        </field>
+        <field name="xsedestaff_petition_id" type="I">
+            <notnull />
+            <constraint>REFERENCES cm_xsedestaff_petitions(id)</constraint>
+        </field>
+        <field name="allocation" type="C" size="256" />
+        <field name="created" type="T" />
+        <field name="modified" type="T" />
+
+        <index name="xsedestaff_compute_allocations_i1">
+            <col>xsedestaff_petition_id</col>
+        </index>
+    </table>
+
+</schema>
