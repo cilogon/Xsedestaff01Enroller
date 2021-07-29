@@ -25,6 +25,13 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
 
     $this->log("FOO petition is " . print_r($petition, true));
 
+    // Only execute during the configured enrollment flow.
+    $enrollmentFlowId = $petition['CoPetition']['co_enrollment_flow_id'];
+    $allowedEnrollmentFlowId = Configure::read('Xsede.OnboardNewStaffEnrollmentFlowId');
+    if($enrollmentFlowId != $allowedEnrollmentFlowId) {
+      $this->redirect($onFinish);
+    }
+
     $coId = $petition['CoPetition']['co_id'];
     $coPersonId = $petition['CoPetition']['enrollee_co_person_id'];
     $coPersonRoleId = $petition['CoPetition']['enrollee_co_person_role_id'];

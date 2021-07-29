@@ -1,4 +1,5 @@
 <?php
+Configure::write('Xsede.OnboardNewStaffEnrollmentFlowId', '12');
 
 Configure::write('Xsede.L3Manager.group.name', 'L3 Managers');
 Configure::write('Xsede.FundedByXsede.group.name', 'Funded By XSEDE');
