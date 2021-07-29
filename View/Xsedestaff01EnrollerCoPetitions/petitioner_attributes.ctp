@@ -10,11 +10,11 @@ function js_local_onload() {
     if ($("#xsedestaff_compute_allocation").is(":visible")) {
       $("#xsedestaff_compute_allocation").hide();
       $("#toggle_compute_allocations").attr("aria-expanded","false");
-      $("#toggle_compute_allocations em").text("arrow_drop_down");
+      $("#toggle_compute_allocations_arrow").text("arrow_drop_down");
     } else {
       $("#xsedestaff_compute_allocation").show();
       $("#toggle_compute_allocations").attr("aria-expanded","true");
-      $("#toggle_compute_allocations em").text("arrow_drop_up");
+      $("#toggle_compute_allocations_arrow").text("arrow_drop_up");
     }
   });
 
@@ -158,7 +158,7 @@ function js_local_onload() {
 <h2>
 <button id="toggle_compute_allocations" class="cm-toggle" aria-expanded="false" aria-controls="xsedestaff_compute_allocation" type="button">
 <span style="font-size: 1em; font-family: 'Noto Sans Bold','Noto Sans','Trebuchet MS',Arial,Helvetica,sans-serif;">Staff Compute Allocations</span>
-<em class="material-icons drop-arrow">arrow_drop_down</em>
+<span id="toggle_compute_allocations_arrow" class="material-icons" style="font-size: 36px;">arrow_drop_down</span>
 </button>
 </h2>
 
