@@ -8,7 +8,6 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
   public $name = "Xsedestaff01EnrollerCoPetitions";
   public $uses = array("CoPetition");
 
-   
   /**
    * Plugin functionality following petitionerAttributes step
    *
@@ -22,8 +21,7 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     $args['contain']['EnrolleeCoPerson'] = 'Name';
 
     $petition = $this->CoPetition->find('first', $args);
-
-    $this->log("FOO petition is " . print_r($petition, true));
+    $this->log("Petition is " . print_r($petition, true));
 
     // Only execute during the configured enrollment flow.
     $enrollmentFlowId = $petition['CoPetition']['co_enrollment_flow_id'];
@@ -39,9 +37,24 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     $familyName = $petition['EnrolleeCoPerson']['Name'][0]['family'];
     $displayName = "$givenName $familyName";
 
+    // Set the CoPetition ID to use as a hidden form element.
+    $this->set('co_petition_id', $id);
+
+    // Set display name to use in view.
+    $this->set('displayName', $displayName);
+
     // Process incoming POST data.
     if($this->request->is('post')) {
-      $this->log("FOO data is " . print_r($this->data, true));
+      $this->log("Incoming POST data is " . print_r($this->data, true));
+
+      // Validate incoming data.
+      $data = $this->validatePost();
+
+      if(!$data) {
+        // The call to validatePost() sets $this->Flash if there are any validation
+        // errors so just return.
+        return;
+      }
 
       // Save the XSEDE staff petition data.
       $petitionModel = new XsedestaffPetition();
@@ -340,9 +353,47 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
 
     // GET, so fall through to display the form.
 
-    // Set the CoPetition ID to use as a hidden form element.
-    $this->set('co_petition_id', $id);
-    $this->set('displayName', $displayName);
+  }
 
+  /**
+   * Validate POST data from an add action.
+   *
+   * @return Array of validated data ready for saving or false if not validated.
+   */
+
+  private function validatePost() {
+    $data = $this->request->data;
+
+    // Trim leading and trailing whitespace from user input.
+    array_walk_recursive($data, function (&$value,$key){ 
+      if(is_string($value)) { 
+        $value = trim($value); 
+      } 
+    });
+
+    // We validate necessary fields here in the controller so that
+    // we can leverage saveAssociated to save the data with validate
+    // set to false. When it is set to tru and there are multiple rows
+    // of associated data validation fails.
+
+    // Validate the XsedestaffPetition fields.
+    $petitionModel = new XsedestaffPetition();
+    $petitionModel->clear();
+    $petitionData = array();
+    $petitionData['XsedestaffPetition'] = $data['XsedestaffPetition'];
+    $petitionModel->set($data);
+
+    $fields = array();
+    $fields[] = 'home_institution_supervisor_email';
+
+    $args = array();
+    $args['fieldList'] = $fields;
+
+    if(!$petitionModel->validates($args)) {
+      $this->Flash->set(_txt('er.fields'), array('key' => 'error'));
+      return false;
+    }
+
+    return $data;
   }
 }

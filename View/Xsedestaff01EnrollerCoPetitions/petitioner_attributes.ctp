@@ -50,7 +50,7 @@ function js_local_onload() {
   <li>
     <div class="field-name">
       <div class="field-title">
-        <?php print $this->Form->label('l3_or_higher', _txt('pl.xsedestaff01_enroller.l3_or_higher', array($displayName))); ?><span class="required">*</span>
+        <?php print $this->Form->label('l3_or_higher', _txt('pl.xsedestaff01_enroller.l3_or_higher', array($displayName))); ?>
       </div>
     </div>
     <div class="field-info">
@@ -61,7 +61,7 @@ function js_local_onload() {
   <li>
     <div class="field-name">
       <div class="field-title">
-        <?php print $this->Form->label('funded_by_xsede', _txt('pl.xsedestaff01_enroller.funded_by_xsede', array($displayName))); ?><span class="required">*</span>
+        <?php print $this->Form->label('funded_by_xsede', _txt('pl.xsedestaff01_enroller.funded_by_xsede', array($displayName))); ?>
       </div>
     </div>
     <div class="field-info">
@@ -123,7 +123,7 @@ function js_local_onload() {
   <li>
     <div class="field-name">
       <div class="field-title">
-        <?php print $this->Form->label('staff_portal', _txt('pl.xsedestaff01_enroller.staff_portal', array($displayName))); ?><span class="required">*</span>
+        <?php print $this->Form->label('staff_portal', _txt('pl.xsedestaff01_enroller.staff_portal', array($displayName))); ?>
       </div>
     </div>
     <div class="field-info">
@@ -134,7 +134,7 @@ function js_local_onload() {
   <li>
     <div class="field-name">
       <div class="field-title">
-        <?php print $this->Form->label('email_distribution_lists', _txt('pl.xsedestaff01_enroller.email_distribution_lists', array($displayName))); ?><span class="required">*</span>
+        <?php print $this->Form->label('email_distribution_lists', _txt('pl.xsedestaff01_enroller.email_distribution_lists', array($displayName))); ?>
       </div>
     </div>
     <div class="field-info">
@@ -145,7 +145,7 @@ function js_local_onload() {
   <li>
     <div class="field-name">
       <div class="field-title">
-        <?php print $this->Form->label('rt_ticket_system', _txt('pl.xsedestaff01_enroller.rt_ticket_system', array($displayName))); ?><span class="required">*</span>
+        <?php print $this->Form->label('rt_ticket_system', _txt('pl.xsedestaff01_enroller.rt_ticket_system', array($displayName))); ?>
       </div>
     </div>
     <div class="field-info">
