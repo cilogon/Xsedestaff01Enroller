@@ -23,13 +23,6 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     $petition = $this->CoPetition->find('first', $args);
     $this->log("Petition is " . print_r($petition, true));
 
-    // Only execute during the configured enrollment flow.
-    $enrollmentFlowId = $petition['CoPetition']['co_enrollment_flow_id'];
-    $allowedEnrollmentFlowId = Configure::read('Xsede.OnboardNewStaffEnrollmentFlowId');
-    if($enrollmentFlowId != $allowedEnrollmentFlowId) {
-      $this->redirect($onFinish);
-    }
-
     $coId = $petition['CoPetition']['co_id'];
     $coPersonId = $petition['CoPetition']['enrollee_co_person_id'];
     $coPersonRoleId = $petition['CoPetition']['enrollee_co_person_role_id'];
@@ -42,6 +35,12 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
 
     // Set display name to use in view.
     $this->set('displayName', $displayName);
+
+    // Save the onFinish URL to which we must redirect after receiving
+    // the incoming POST data.
+    if(!$this->Session->check('xsede.plugin.staff_01_enroller.onFinish')) {
+      $this->Session->write('xsede.plugin.staff_01_enroller.onFinish', $onFinish);
+    }
 
     // Process incoming POST data.
     if($this->request->is('post')) {
@@ -81,7 +80,6 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
           };
         }
       }
-
 
       // Add to the L3 or higher group if applicable.
       if($this->data['XsedestaffPetition']['l3_or_higher']) {
@@ -346,6 +344,8 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
           }
         }
       }
+
+      $onFinish = $this->Session->consume('xsede.plugin.staff_01_enroller.onFinish');
 
       // Done processing all POST data so redirect to continue enrollment flow.
       $this->redirect($onFinish);

@@ -43,6 +43,7 @@ function js_local_onload() {
   );
 
  print $this->Form->hidden('co_petition_id', array('default' => $co_petition_id));
+ print $this->Form->hidden('co_enrollment_flow_wedge_id', array('default' => $vv_efwid));
 
 ?> 
 
