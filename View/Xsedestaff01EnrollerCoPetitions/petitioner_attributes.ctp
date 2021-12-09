@@ -1,8 +1,8 @@
 <script type="text/javascript">
 
 function js_local_onload() {
-  $("#XsedestaffPetitionL3OrHigher").click(function(){
-    $("#XsedestaffPetitionFundedByXsede").prop('checked', true);
+  $("#XsedestaffPetitionL3OrHigher1").click(function(){
+    $("#XsedestaffPetitionFundedByXsede1").prop('checked', true);
   });
 
 
@@ -55,7 +55,16 @@ function js_local_onload() {
       </div>
     </div>
     <div class="field-info">
-      <?php print $this->Form->input('l3_or_higher'); ?>
+      <?php 
+        $options = array();
+        $options['1'] = 'Yes';
+        $options['0'] = 'No';
+        $attributes = array();
+        $attributes['legend'] = false;
+        $attributes['separator'] = "  ";
+        $attributes['value'] = '0';
+        print $this->Form->radio('l3_or_higher', $options, $attributes);
+      ?>
     </div>
   </li>
 
@@ -66,7 +75,16 @@ function js_local_onload() {
       </div>
     </div>
     <div class="field-info">
-      <?php print $this->Form->input('funded_by_xsede'); ?>
+      <?php
+        $options = array();
+        $options['1'] = 'Yes';
+        $options['0'] = 'No';
+        $attributes = array();
+        $attributes['legend'] = false;
+        $attributes['separator'] = "  ";
+        $attributes['value'] = '1';
+        print $this->Form->radio('funded_by_xsede', $options, $attributes);
+      ?>
     </div>
   </li>
 
@@ -128,7 +146,16 @@ function js_local_onload() {
       </div>
     </div>
     <div class="field-info">
-      <?php print $this->Form->input('staff_portal'); ?>
+      <?php
+        $options = array();
+        $options['1'] = 'Yes';
+        $options['0'] = 'No';
+        $attributes = array();
+        $attributes['legend'] = false;
+        $attributes['separator'] = "  ";
+        $attributes['value'] = '1';
+        print $this->Form->radio('staff_portal', $options, $attributes);
+      ?>
     </div>
   </li>
 
@@ -139,7 +166,16 @@ function js_local_onload() {
       </div>
     </div>
     <div class="field-info">
-      <?php print $this->Form->input('email_distribution_lists'); ?>
+      <?php
+        $options = array();
+        $options['1'] = 'Yes';
+        $options['0'] = 'No';
+        $attributes = array();
+        $attributes['legend'] = false;
+        $attributes['separator'] = "  ";
+        $attributes['value'] = '1';
+        print $this->Form->radio('email_distribution_lists', $options, $attributes);
+      ?>
     </div>
   </li>
 
@@ -150,7 +186,16 @@ function js_local_onload() {
       </div>
     </div>
     <div class="field-info">
-      <?php print $this->Form->input('rt_ticket_system'); ?>
+      <?php
+        $options = array();
+        $options['1'] = 'Yes';
+        $options['0'] = 'No';
+        $attributes = array();
+        $attributes['legend'] = false;
+        $attributes['separator'] = "  ";
+        $attributes['value'] = '0';
+        print$this->Form->radio('rt_ticket_system', $options, $attributes);
+      ?>
     </div>
   </li>
 
@@ -165,6 +210,7 @@ function js_local_onload() {
 
 <div id="xsedestaff_compute_allocation" style="display: none;">
 
+<p style="font-style: italic;">Check the box for each allocation <?php print "$displayName"; ?> should have.</p>
 
 <ul id="xsedestaff_petition_3" class="fields form-list">
 
