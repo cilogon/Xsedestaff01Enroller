@@ -271,7 +271,7 @@ function js_local_onload() {
       <span class="required"><?php print _txt('fd.req'); ?></span>
     </div>
     <div class="field-info">
-      <?php print $this->Form->submit(_txt('op.submit')); ?>
+      <?php print $this->Form->submit(_txt('pl.xsedestaff01_enroller.button.label.submit')); ?>
     </div>
   </li>
 

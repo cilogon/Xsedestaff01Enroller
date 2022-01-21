@@ -59,4 +59,6 @@ $cm_xsedestaff01_enroller_texts['en_US'] = array(
     XsedeStaffComputeAllocationEnum::TG_TRA160027 => 'TG-TRA160027: IU staff allocation, PI Therese Miller'
   ),
 
+  'pl.xsedestaff01_enroller.button.label.submit' => 'Submit',
+
 );
