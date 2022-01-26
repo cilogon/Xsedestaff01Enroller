@@ -18,7 +18,9 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
   protected function execute_plugin_petitionerAttributes($id, $onFinish) {
     $args = array();
     $args['conditions']['CoPetition.id'] = $id;
-    $args['contain']['EnrolleeCoPerson'] = 'Name';
+    $args['contain']['EnrolleeCoPerson']['CoOrgIdentityLink'] = 'OrgIdentity';
+    $args['contain']['EnrolleeCoPerson'][] = 'Name';
+    $args['contain']['EnrolleeCoPerson'][] = 'Identifier';
 
     $petition = $this->CoPetition->find('first', $args);
     $this->log("Petition is " . print_r($petition, true));
@@ -29,6 +31,17 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     $givenName = $petition['EnrolleeCoPerson']['Name'][0]['given'];
     $familyName = $petition['EnrolleeCoPerson']['Name'][0]['family'];
     $displayName = "$givenName $familyName";
+
+    $xsedeUsername = null;
+    foreach($petition['EnrolleeCoPerson']['Identifier'] as $identifier) {
+      if($identifier['type'] == 'xsedeusername') {
+        $xsedeUsername = $identifier['identifier'];
+        break;
+      }
+    }
+
+    // We assume there is only one OrgIdentity at this point.
+    $orgId = $petition['EnrolleeCoPerson']['CoOrgIdentityLink'][0]['org_identity_id'];
 
     // Set the CoPetition ID to use as a hidden form element.
     $this->set('co_petition_id', $id);
@@ -342,6 +355,24 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
             $this->Flash->set(_txt('pl.xsedestaff01_enroller.error.xsedestaffpetition.save'), array('key' => 'error'));
             $this->redirect("/");
           }
+        }
+      }
+
+      // Add the XSEDE IdP ePPN as a login Identifier to the Organizational Identity.
+      if(!empty($xsedeUsername)) {
+        $this->CoPetition->EnrolleeCoPerson->CoOrgIdentityLink->OrgIdentity->Identifier->clear();
+
+        $data = array();
+        $data['Identifier']['identifier'] = $xsedeUsername . '@xsede.org';
+        $data['Identifier']['type'] = IdentifierEnum::ePPN;
+        $data['Identifier']['login'] = true;
+        $data['Identifier']['status'] = SuspendableStatusEnum::Active;
+        $data['Identifier']['org_identity_id'] = $orgId;
+
+        if(!$this->CoPetition->EnrolleeCoPerson->CoOrgIdentityLink->OrgIdentity->Identifier->save($data)) {
+          $this->log("Error saving Identifier" . print_r($data, true));
+          $this->Flash->set(_txt('pl.xsedestaff01_enroller.error.xsedestaffpetition.save'), array('key' => 'error'));
+          $this->redirect("/");
         }
       }
 
