@@ -7,6 +7,52 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
   // Class name, used by Cake
   public $name = "Xsedestaff01EnrollerCoPetitions";
   public $uses = array("CoPetition");
+  
+  /**
+   * Plugin functionality following finalize step
+   *
+   * @param Integer $id CO Petition ID
+   * @param Array $onFinish URL, in Cake format
+   */
+
+  protected function execute_plugin_finalize($id, $onFinish) {
+    $args = array();
+    $args['conditions']['CoPetition.id'] = $id;
+    $args['contain']['CoEnrollmentFlow'] = 'CoEnrollmentFlowFinMessageTemplate';
+    $args['contain']['EnrolleeCoPerson'] = array('PrimaryName', 'Identifier');
+    $args['contain']['EnrolleeCoPerson']['CoGroupMember'] = 'CoGroup';
+    $args['contain']['EnrolleeCoPerson']['CoPersonRole'][] = 'Cou';
+    $args['contain']['EnrolleeCoPerson']['CoPersonRole']['SponsorCoPerson'][] = 'PrimaryName';
+    $args['contain']['EnrolleeOrgIdentity'] = array('EmailAddress', 'PrimaryName');
+
+    $petition = $this->CoPetition->find('first', $args);
+    $this->log("Finalize: Petition is " . print_r($petition, true));
+
+    // Find the XsedestaffPetition.
+    $petitionModel = new XsedestaffPetition();
+
+    $args = array();
+    $args['conditions']['XsedestaffPetition.co_petition_id'] = $id;
+    $args['contain'] = 'XsedestaffComputeAllocation';
+
+    $xsedeStaffPetition = $petitionModel->find('first', $args);
+
+    $this->log("Finalize: XsedestaffPetition is " . print_r($xsedeStaffPetition, true));
+
+    // Notify the enrollee.
+    $this->notifyEnrolleeFinalize($petition);
+
+    // Notify the project manager.
+    $this->notifyProjectManagerFinalize($petition);
+
+    // Notify the RT coordinator if RT was requested.
+    if($xsedeStaffPetition['XsedestaffPetition']['rt_ticket_system']) {
+      $this->notifyRtCoordinatorFinalize($petition, $xsedeStaffPetition);
+    }
+
+    // This step is completed so redirect to continue the flow.
+    $this->redirect($onFinish);
+  }
 
   /**
    * Plugin functionality following petitionerAttributes step
@@ -23,7 +69,7 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     $args['contain']['EnrolleeCoPerson'][] = 'Identifier';
 
     $petition = $this->CoPetition->find('first', $args);
-    $this->log("Petition is " . print_r($petition, true));
+    $this->log("Petitioner Attributes: Petition is " . print_r($petition, true));
 
     $coId = $petition['CoPetition']['co_id'];
     $coPersonId = $petition['CoPetition']['enrollee_co_person_id'];
@@ -384,6 +430,325 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
 
     // GET, so fall through to display the form.
 
+  }
+
+  /**
+   *
+   *
+   */
+  private function notifyEnrolleeFinalize($petition) {
+
+    if(empty($petition['CoPetition']['cou_id'])) {
+      $this->log("Finalize: could not find COU ID from petition");
+      return;
+    }
+
+    $coPetitionId= $petition['CoPetition']['id'];
+    $coId = $petition['CoPetition']['co_id'];
+    $couId = $petition['CoPetition']['cou_id'];
+
+    // Find the Project Manager for the COU.
+    $args = array();
+    $args['conditions']['CoPersonRole.affiliation'] = 'projectmanager';
+    $args['conditions']['CoPersonRole.status'] = StatusEnum::Active;
+    $args['contain'][] = 'Cou';
+    $args['contain']['CoPerson'] = array('PrimaryName', 'EmailAddress');
+
+    $projectManagerRoles =
+      $this
+        ->CoPetition
+        ->Co
+        ->CoPerson
+        ->CoPersonRole
+        ->find('all', $args);
+
+    foreach($projectManagerRoles as $pm) {
+      $childCous = $this->CoPetition->Co->Cou->childCousById($pm['Cou']['id'], $coId);
+      foreach($childCous as $childId => $childName) {
+        if($childId == $couId) {
+          $projectManagerCoPersonId = $pm['CoPersonRole']['co_person_id'];
+          $projectManagerName = $pm['CoPerson']['PrimaryName'];
+          $projectManagerEmail = $pm['CoPerson']['EmailAddress'][0]['mail']; // Take the first email for now.
+          break 2;
+        }
+      }
+    }
+
+    $this->log("Finalize: Project manager name is " . print_r($projectManagerName, true));
+    $this->log("Finalize: Project manager email is " . print_r($projectManagerEmail, true));
+
+    // Find the message template.
+    $args = array();
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.context'] = MessageTemplateEnum::Plugin;
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard: Mail to Enrollee";
+    $args['contain'] = false;
+
+    $template =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->find('first', $args);
+
+    // Determine the mail list groups to which the enrollee has been added.
+    $mailListHtml = "";
+    foreach($petition['EnrolleeCoPerson']['CoGroupMember'] as $m) {
+      $groupName = $m['CoGroup']['name'];
+      $matches = array();
+      if(preg_match('/(^.+)-mail$/', $groupName, $matches)) {
+        $listPrefix = $matches[1];
+        $list = $listPrefix . '@xsede.org';
+        $mailListHtml = $mailListHtml . "<li>$list</li>";
+      }
+    }
+
+    $mailListHtml = "<ul>$mailListHtml</ul>";
+
+    $substitutions = array();
+    $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+    $substitutions['PM_NAME'] = generateCn($projectManagerName);
+    $substitutions['PM_EMAIL'] = $projectManagerEmail;
+    $substitutions['MAIL_LISTS'] = $mailListHtml;
+
+    $subject = null;
+    $body = null;
+    $cc = null;
+    $bcc = null;
+    $comment = 'This is a comment';
+
+    $format = MessageFormatEnum::HTML;
+
+    list($body, $subject, $format, $cc, $bcc) =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->getMessageTemplateFields($template['CoEnrollmentFlowFinMessageTemplate']);
+
+    $subject = processTemplate($subject, $substitutions);
+    $body = processTemplate($body, $substitutions);
+
+    $this
+      ->CoPetition
+      ->Co
+      ->CoPerson
+      ->CoNotificationRecipient
+      ->register(
+          $petition['CoPetition']['enrollee_co_person_id'],
+          null,
+          null,
+          'coperson',
+          $petition['CoPetition']['enrollee_co_person_id'],
+          ActionEnum::CoPetitionUpdated,
+          $comment,
+          array(
+            'controller' => 'co_petitions',
+            'action'     => 'view',
+            'id'         => $coPetitionId
+          ),
+          false,
+          null,
+          $subject,
+          $body,
+          $cc,
+          $bcc,
+          $format);
+  }
+
+  /**
+   *
+   *
+   */
+  private function notifyProjectManagerFinalize($petition) {
+
+    if(empty($petition['CoPetition']['cou_id'])) {
+      $this->log("Finalize: could not find COU ID from petition");
+      return;
+    }
+
+    $coPetitionId= $petition['CoPetition']['id'];
+    $coId = $petition['CoPetition']['co_id'];
+    $couId = $petition['CoPetition']['cou_id'];
+
+    // Find the Project Manager for the COU.
+    $args = array();
+    $args['conditions']['CoPersonRole.affiliation'] = 'projectmanager';
+    $args['conditions']['CoPersonRole.status'] = StatusEnum::Active;
+    $args['contain'] = 'Cou';
+
+    $projectManagerRoles =
+      $this
+        ->CoPetition
+        ->Co
+        ->CoPerson
+        ->CoPersonRole
+        ->find('all', $args);
+
+    foreach($projectManagerRoles as $pm) {
+      $childCous = $this->CoPetition->Co->Cou->childCousById($pm['Cou']['id'], $coId);
+      foreach($childCous as $childId => $childName) {
+        if($childId == $couId) {
+          $projectManagerCoPersonId = $pm['CoPersonRole']['co_person_id'];
+          break 2;
+        }
+      }
+    }
+
+    $this->log("Finalize: Project manager Co Person ID is $projectManagerCoPersonId");
+
+    // Find the message template.
+    $args = array();
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.context'] = MessageTemplateEnum::Plugin;
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard:Mail to Program Manager";
+    $args['contain'] = false;
+
+    $template =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->find('first', $args);
+
+    $substitutions = array();
+    $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+
+    $subject = null;
+    $body = null;
+    $cc = null;
+    $bcc = null;
+    $comment = 'This is a comment';
+
+    $format = MessageFormatEnum::Plaintext;
+
+    list($body, $subject, $format, $cc, $bcc) =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->getMessageTemplateFields($template['CoEnrollmentFlowFinMessageTemplate']);
+
+    $subject = processTemplate($subject, $substitutions);
+    $body = processTemplate($body, $substitutions);
+
+    $this
+      ->CoPetition
+      ->Co
+      ->CoPerson
+      ->CoNotificationRecipient
+      ->register(
+          $petition['CoPetition']['enrollee_co_person_id'],
+          null,
+          null,
+          'coperson',
+          $projectManagerCoPersonId,
+          ActionEnum::CoPetitionUpdated,
+          $comment,
+          array(
+            'controller' => 'co_petitions',
+            'action'     => 'view',
+            'id'         => $coPetitionId
+          ),
+          false,
+          null,
+          $subject,
+          $body,
+          $cc,
+          $bcc,
+          $format);
+  }
+
+  /**
+   *
+   *
+   */
+  private function notifyRtCoordinatorFinalize($petition) {
+
+    if(empty($petition['CoPetition']['cou_id'])) {
+      $this->log("Finalize: could not find COU ID from petition");
+      return;
+    }
+
+    $coPetitionId= $petition['CoPetition']['id'];
+    $coId = $petition['CoPetition']['co_id'];
+    $couId = $petition['CoPetition']['cou_id'];
+
+    // Find the RT Coordinator.
+    $args = array();
+    $args['conditions']['CoPersonRole.affiliation'] = 'rtcoordinator';
+    $args['conditions']['CoPersonRole.status'] = StatusEnum::Active;
+    $args['contain'] = false;
+
+    $rtCoordinator =
+      $this
+        ->CoPetition
+        ->Co
+        ->CoPerson
+        ->CoPersonRole
+        ->find('first', $args); // We assume for now there is only one.
+
+    $this->log("Finalize: RT Coordinator is " . print_r($rtCoordinator, true));
+
+    $rtCoordinatorCoPersonId = $rtCoordinator['CoPersonRole']['co_person_id'];
+
+    // Find the message template.
+    $args = array();
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.context'] = MessageTemplateEnum::Plugin;
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard: Mail to RT Coordinator";
+    $args['contain'] = false;
+
+    $template =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->find('first', $args);
+
+    $substitutions = array();
+    $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+
+    $subject = null;
+    $body = null;
+    $cc = null;
+    $bcc = null;
+    $comment = 'This is a comment';
+
+    $format = MessageFormatEnum::Plaintext;
+
+    list($body, $subject, $format, $cc, $bcc) =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->getMessageTemplateFields($template['CoEnrollmentFlowFinMessageTemplate']);
+
+    $subject = processTemplate($subject, $substitutions);
+    $body = processTemplate($body, $substitutions);
+
+    $this
+      ->CoPetition
+      ->Co
+      ->CoPerson
+      ->CoNotificationRecipient
+      ->register(
+          $petition['CoPetition']['enrollee_co_person_id'],
+          null,
+          null,
+          'coperson',
+          $rtCoordinatorCoPersonId,
+          ActionEnum::CoPetitionUpdated,
+          $comment,
+          array(
+            'controller' => 'co_petitions',
+            'action'     => 'view',
+            'id'         => $coPetitionId
+          ),
+          false,
+          null,
+          $subject,
+          $body,
+          $cc,
+          $bcc,
+          $format);
   }
 
   /**
