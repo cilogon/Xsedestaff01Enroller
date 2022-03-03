@@ -50,6 +50,9 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
       $this->notifyRtCoordinatorFinalize($petition, $xsedeStaffPetition);
     }
 
+    // Notify the members of the Onboarding Managers group.
+    $this->notifyOnboardingManagersFinalize($petition);
+
     // This step is completed so redirect to continue the flow.
     $this->redirect($onFinish);
   }
@@ -559,6 +562,91 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
    *
    *
    */
+  private function notifyOnboardingManagersFinalize($petition) {
+
+    $coPetitionId= $petition['CoPetition']['id'];
+    $coId = $petition['CoPetition']['co_id'];
+    $couId = $petition['CoPetition']['cou_id'];
+
+    // Find the Onboarding Managers group.
+    $args = array();
+    $args['conditions']['CoGroup.name'] = 'Onboarding Managers';
+    $args['contain'] = false;
+
+    $onboardingManagersCoGroup =
+      $this
+        ->CoPetition
+        ->Co
+        ->CoGroup
+        ->find('first', $args);
+
+    $onboardingManagersCoGroupId = $onboardingManagersCoGroup['CoGroup']['id'];
+
+    // Find the message template.
+    $args = array();
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.context'] = MessageTemplateEnum::Plugin;
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard: Mail to Onboarding Managers";
+    $args['contain'] = false;
+
+    $template =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->find('first', $args);
+
+    $substitutions = array();
+    $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+
+    $subject = null;
+    $body = null;
+    $cc = null;
+    $bcc = null;
+    $comment = 'This is a comment';
+
+    $format = MessageFormatEnum::HTML;
+
+    list($body, $subject, $format, $cc, $bcc) =
+      $this
+        ->CoPetition
+        ->CoEnrollmentFlow
+        ->CoEnrollmentFlowFinMessageTemplate
+        ->getMessageTemplateFields($template['CoEnrollmentFlowFinMessageTemplate']);
+
+    $subject = processTemplate($subject, $substitutions);
+    $body = processTemplate($body, $substitutions);
+
+    $this
+      ->CoPetition
+      ->Co
+      ->CoPerson
+      ->CoNotificationRecipient
+      ->register(
+          $petition['CoPetition']['enrollee_co_person_id'],
+          null,
+          null,
+          'cogroup',
+          $onboardingManagersCoGroupId,
+          ActionEnum::CoPetitionUpdated,
+          $comment,
+          array(
+            'controller' => 'co_petitions',
+            'action'     => 'view',
+            'id'         => $coPetitionId
+          ),
+          false,
+          null,
+          $subject,
+          $body,
+          $cc,
+          $bcc,
+          $format);
+  }
+
+  /**
+   *
+   *
+   */
   private function notifyProjectManagerFinalize($petition) {
 
     if(empty($petition['CoPetition']['cou_id'])) {
@@ -599,7 +687,7 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
     // Find the message template.
     $args = array();
     $args['conditions']['CoEnrollmentFlowFinMessageTemplate.context'] = MessageTemplateEnum::Plugin;
-    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard:Mail to Program Manager";
+    $args['conditions']['CoEnrollmentFlowFinMessageTemplate.description'] = "Onboard: Mail to Program Manager";
     $args['contain'] = false;
 
     $template =
