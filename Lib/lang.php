@@ -22,6 +22,7 @@ $cm_xsedestaff01_enroller_texts['en_US'] = array(
   'pl.xsedestaff01_enroller.rt_ticket_system' => 'Add %1$s to the RT ticket system?',
   'pl.xsedestaff01_enroller.other_resources' => 'Are there any other resources to be added?',
   'pl.xsedestaff01_enroller.additional_information' => 'Any additional information you want to add?',
+  'pl.xsedestaff01_enroller.co_person_profile_link_text' => 'Click here for the XSEDE Registry profile page',
 
   'pl.xsedestaff01_enroller.home_institution_enum' => array(
     XsedeStaffHomeInstitutionEnum::Cornell => 'Cornell',

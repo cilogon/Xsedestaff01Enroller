@@ -1,5 +1,7 @@
 <?php
 
+App::uses('HtmlHelper', 'View/Helper');
+
 App::uses('CoPetitionsController', 'Controller');
 App::uses('XsedestaffPetition', 'Xsedestaff01Enroller.Model');
  
@@ -7,6 +9,30 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
   // Class name, used by Cake
   public $name = "Xsedestaff01EnrollerCoPetitions";
   public $uses = array("CoPetition");
+
+  /**
+   * Create HTML link to enrollee canvas view.
+   *
+   * @param Integer $enrolleeCoPersonId enrollee CO Person ID
+   * @return String HTML with link to canvas view
+   */
+  private function enrolleeCanvasLink($enrolleeCoPersonId) {
+    $routingArray = array();
+    $routingArray['plugin'] = null;
+    $routingArray['controller'] = 'co_people';
+    $routingArray['action'] = 'canvas';
+    $routingArray['full_base'] = true;
+    $routingArray[] = $enrolleeCoPersonId;
+
+    $htmlHelper = new HtmlHelper(new View());
+
+    $htmlLink = $htmlHelper->link(
+      _txt('pl.xsedestaff01_enroller.co_person_profile_link_text'),
+      $routingArray
+    );
+
+    return $htmlLink;
+  }
   
   /**
    * Plugin functionality following finalize step
@@ -14,7 +40,6 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
    * @param Integer $id CO Petition ID
    * @param Array $onFinish URL, in Cake format
    */
-
   protected function execute_plugin_finalize($id, $onFinish) {
     $args = array();
     $args['conditions']['CoPetition.id'] = $id;
@@ -595,8 +620,11 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
         ->CoEnrollmentFlowFinMessageTemplate
         ->find('first', $args);
 
+    $htmlLink = $this->enrolleeCanvasLink($petition['EnrolleeCoPerson']['id']);
+
     $substitutions = array();
     $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+    $substitutions['CO_PERSON_PROFILE_LINK'] = $htmlLink;
 
     $subject = null;
     $body = null;
@@ -697,8 +725,11 @@ class Xsedestaff01EnrollerCoPetitionsController extends CoPetitionsController {
         ->CoEnrollmentFlowFinMessageTemplate
         ->find('first', $args);
 
+    $htmlLink = $this->enrolleeCanvasLink($petition['EnrolleeCoPerson']['id']);
+
     $substitutions = array();
     $substitutions['CO_PERSON'] = generateCn($petition['EnrolleeCoPerson']['PrimaryName']);
+    $substitutions['CO_PERSON_PROFILE_LINK'] = $htmlLink;
 
     $subject = null;
     $body = null;
